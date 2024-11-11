@@ -131,12 +131,19 @@ class PAS2:
 
     def is_semantically_trustworthy(self, similarity_matrix: np.ndarray, threshold: float = 0.9) -> bool:
         n = similarity_matrix.shape[0]
+        total_pairs = 0
+        pairs_above_threshold = 0
+        
         for i in range(n):
-            for j in range(i + 1, n):
-                if similarity_matrix[i][j] < threshold:
-                    self.logger.info(f"Semantic similarity between response {i+1} and {j+1} below threshold: {similarity_matrix[i][j]}")
-                    return False
-        return True
+            for j in range(i + 1, n):  # Only upper triangle to avoid counting pairs twice
+                total_pairs += 1
+                if similarity_matrix[i][j] >= threshold:
+                    pairs_above_threshold += 1
+        
+        percentage_above_threshold = pairs_above_threshold / total_pairs if total_pairs > 0 else 0
+        self.logger.info(f"Pairs above threshold: {pairs_above_threshold}/{total_pairs} = {percentage_above_threshold*100:.2f}%")
+        
+        return percentage_above_threshold >= 0.5  # Consider trustworthy if at least 50% are above threshold
 
     def compare_answers(self, answer1: str, answer2: str) -> bool:
         try:
