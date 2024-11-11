@@ -24,7 +24,7 @@ class HallucinationDetector:
     def process_query(self, query: str):
         # Process the query using PAS2
         hallucinated, original_response, all_questions, all_responses = self.pas2.detect_hallucination(
-            query, n_paraphrases=2, similarity_threshold=0.7, match_percentage_threshold=0.6
+            query, n_paraphrases=3, similarity_threshold=0.6, match_percentage_threshold=0.7
         )
 
         # Get embeddings and calculate matrices
