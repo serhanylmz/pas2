@@ -14,7 +14,7 @@ A hallucination detection system that uses paraphrasing and semantic similarity 
 ## Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/serhanylmz/pas2
 cd pas2
 pip install -r requirements.txt
 ```
@@ -69,4 +69,32 @@ hallucinated, response, questions, answers = detector.detect_hallucination(
 
 ## License
 
-[Add license information]
+This project is licensed under the MIT License with an attribution requirement - see the [LICENSE](LICENSE) file for details.
+
+### Citation
+
+If you use PAS2 in your research or project, please cite it as:
+
+```bibtex
+@software{pas2_2024,
+  author = {Serhan Yilmaz},
+  title = {PAS2 - Paraphrase-based AI System for Semantic Similarity},
+  year = {2024},
+  publisher = {GitHub},
+  url = {https://github.com/serhanylmz/pas2}
+}
+```
+
+### Attribution Requirements
+
+When using PAS2, you must provide appropriate attribution by:
+
+1. Including the copyright notice and license in any copy or substantial portion of the software
+2. Citing the project in any publications, presentations, or documentation that uses or builds upon this work
+3. Maintaining a link to the original repository in any forks or derivative works
+
+## Contact
+
+Serhan Yilmaz
+serhan.yilmaz@sabanciuniv.edu
+Sabanci University
