@@ -1,0 +1,8 @@
+numpy
+openai
+matplotlib
+python-dotenv
+argparse
+gradio
+pandas
+openpyxl
