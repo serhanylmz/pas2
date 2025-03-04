@@ -2,6 +2,9 @@
 *.png
 *.xlsx
 
+.gradio/
+.ipynb_checkpoints/
+
 # Environment Variables
 .env
 
