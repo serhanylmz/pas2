@@ -14,6 +14,7 @@ import time
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import sqlite3
 
 # Configure logging
 logging.basicConfig(
@@ -379,23 +380,78 @@ Your response should be a JSON with the following fields:
 class HallucinationDetectorApp:
     def __init__(self):
         self.pas2 = None
-        self.results_file = "hallucination_results.xlsx"
+        # Use persistent storage directory
+        self.data_dir = "/data"
+        self.db_path = os.path.join(self.data_dir, "feedback.db")
         logger.info("Initializing HallucinationDetectorApp")
-        self._initialize_results_file()
+        self._initialize_database()
         self.progress_callback = None
     
-    def _initialize_results_file(self):
-        if not os.path.exists(self.results_file):
-            logger.info("Creating new results file: %s", self.results_file)
-            df = pd.DataFrame(columns=[
-                'timestamp', 'original_query', 'original_response',
-                'paraphrased_queries', 'paraphrased_responses',
-                'hallucination_detected', 'confidence_score', 
-                'conflicting_facts', 'reasoning', 'summary', 'user_feedback'
-            ])
-            df.to_excel(self.results_file, index=False)
-        else:
-            logger.info("Results file already exists: %s", self.results_file)
+    def _initialize_database(self):
+        """Initialize SQLite database for feedback storage in persistent directory"""
+        try:
+            # Create data directory if it doesn't exist
+            os.makedirs(self.data_dir, exist_ok=True)
+            logger.info(f"Ensuring data directory exists at {self.data_dir}")
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Create table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    original_query TEXT,
+                    original_response TEXT,
+                    paraphrased_queries TEXT,
+                    paraphrased_responses TEXT,
+                    hallucination_detected INTEGER,
+                    confidence_score REAL,
+                    conflicting_facts TEXT,
+                    reasoning TEXT,
+                    summary TEXT,
+                    user_feedback TEXT
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"Database initialized successfully at {self.db_path}")
+        except Exception as e:
+            logger.error(f"Error initializing database: {str(e)}", exc_info=True)
+            # Fallback to temporary directory if /data is not accessible
+            temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_data")
+            os.makedirs(temp_dir, exist_ok=True)
+            self.db_path = os.path.join(temp_dir, "feedback.db")
+            logger.warning(f"Using fallback database location: {self.db_path}")
+            
+            # Try creating database in fallback location
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS feedback (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT,
+                        original_query TEXT,
+                        original_response TEXT,
+                        paraphrased_queries TEXT,
+                        paraphrased_responses TEXT,
+                        hallucination_detected INTEGER,
+                        confidence_score REAL,
+                        conflicting_facts TEXT,
+                        reasoning TEXT,
+                        summary TEXT,
+                        user_feedback TEXT
+                    )
+                ''')
+                conn.commit()
+                conn.close()
+                logger.info(f"Database initialized in fallback location")
+            except Exception as fallback_error:
+                logger.error(f"Critical error: Could not initialize database in fallback location: {str(fallback_error)}", exc_info=True)
+                raise
     
     def set_progress_callback(self, callback):
         """Set the progress callback function"""
@@ -447,49 +503,80 @@ class HallucinationDetectorApp:
             }
     
     def save_feedback(self, results, feedback):
-        """Save results and user feedback to Excel file"""
+        """Save results and user feedback to SQLite database"""
         try:
             logger.info("Saving user feedback: %s", feedback)
-            # Read existing data
-            if os.path.exists(self.results_file):
-                logger.debug("Reading existing results file")
-                df = pd.read_excel(self.results_file)
-            else:
-                logger.debug("Creating new results DataFrame")
-                df = pd.DataFrame(columns=[
-                    'timestamp', 'original_query', 'original_response',
-                    'paraphrased_queries', 'paraphrased_responses',
-                    'hallucination_detected', 'confidence_score', 
-                    'conflicting_facts', 'reasoning', 'summary', 'user_feedback'
-                ])
             
-            # Prepare data to save
-            data = {
-                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'original_query': results.get('original_query', ''),
-                'original_response': results.get('original_response', ''),
-                'paraphrased_queries': str(results.get('paraphrased_queries', [])),
-                'paraphrased_responses': str(results.get('paraphrased_responses', [])),
-                'hallucination_detected': results.get('hallucination_detected', False),
-                'confidence_score': results.get('confidence_score', 0.0),
-                'conflicting_facts': str(results.get('conflicting_facts', [])),
-                'reasoning': results.get('reasoning', ''),
-                'summary': results.get('summary', ''),
-                'user_feedback': feedback
-            }
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
             
-            # Append new data
-            df = pd.concat([df, pd.DataFrame([data])], ignore_index=True)
+            # Prepare data
+            data = (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                results.get('original_query', ''),
+                results.get('original_response', ''),
+                str(results.get('paraphrased_queries', [])),
+                str(results.get('paraphrased_responses', [])),
+                1 if results.get('hallucination_detected', False) else 0,
+                results.get('confidence_score', 0.0),
+                str(results.get('conflicting_facts', [])),
+                results.get('reasoning', ''),
+                results.get('summary', ''),
+                feedback
+            )
             
-            # Save to Excel
-            logger.debug("Saving feedback to Excel file")
-            df.to_excel(self.results_file, index=False)
+            # Insert data
+            cursor.execute('''
+                INSERT INTO feedback (
+                    timestamp, original_query, original_response,
+                    paraphrased_queries, paraphrased_responses,
+                    hallucination_detected, confidence_score,
+                    conflicting_facts, reasoning, summary, user_feedback
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', data)
             
-            logger.info("Feedback saved successfully")
+            conn.commit()
+            conn.close()
+            
+            logger.info("Feedback saved successfully to database")
             return "Feedback saved successfully!"
         except Exception as e:
             logger.error("Error saving feedback: %s", str(e), exc_info=True)
             return f"Error saving feedback: {str(e)}"
+            
+    def get_feedback_stats(self):
+        """Get statistics about collected feedback"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get total feedback count
+            cursor.execute("SELECT COUNT(*) FROM feedback")
+            total_count = cursor.fetchone()[0]
+            
+            # Get hallucination detection stats
+            cursor.execute("""
+                SELECT hallucination_detected, COUNT(*) 
+                FROM feedback 
+                GROUP BY hallucination_detected
+            """)
+            detection_stats = dict(cursor.fetchall())
+            
+            # Get average confidence score
+            cursor.execute("SELECT AVG(confidence_score) FROM feedback")
+            avg_confidence = cursor.fetchone()[0] or 0
+            
+            conn.close()
+            
+            return {
+                "total_feedback": total_count,
+                "hallucinations_detected": detection_stats.get(1, 0),
+                "no_hallucinations": detection_stats.get(0, 0),
+                "average_confidence": round(avg_confidence, 2)
+            }
+        except Exception as e:
+            logger.error("Error getting feedback stats: %s", str(e), exc_info=True)
+            return None
 
 
 # Progress tracking for UI updates
@@ -1122,14 +1209,41 @@ def create_interface():
                 None
             ]
     
-    # Helper function to submit feedback
+    # Helper function to submit feedback and update stats
     def combine_feedback(fb_input, fb_text, results):
         combined_feedback = f"{fb_input}: {fb_text}" if fb_text else fb_input
         if not results:
-            return "No results to attach feedback to."
+            return "No results to attach feedback to.", ""
         
         response = detector.save_feedback(results, combined_feedback)
-        return response
+        
+        # Get updated stats
+        stats = detector.get_feedback_stats()
+        if stats:
+            stats_html = f"""
+            <div class="stats-section" style="margin-top: 15px;">
+                <div class="stat-item">
+                    <div class="stat-value">{stats['total_feedback']}</div>
+                    <div class="stat-label">Total Feedback</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{stats['hallucinations_detected']}</div>
+                    <div class="stat-label">Hallucinations Found</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{stats['no_hallucinations']}</div>
+                    <div class="stat-label">No Hallucinations</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{stats['average_confidence']}</div>
+                    <div class="stat-label">Avg. Confidence</div>
+                </div>
+            </div>
+            """
+        else:
+            stats_html = ""
+        
+        return response, stats_html
     
     # Create the interface
     with gr.Blocks(css=css, theme=gr.themes.Soft()) as interface:
@@ -1220,6 +1334,9 @@ def create_interface():
         # Results display
         results_accordion = gr.HTML(visible=False)
         
+        # Add feedback stats display
+        feedback_stats = gr.HTML(visible=True)
+        
         # Feedback section
         with gr.Accordion("Provide Feedback", open=False, visible=False) as feedback_accordion:
             gr.Markdown("### Help Improve the System")
@@ -1240,10 +1357,29 @@ def create_interface():
             feedback_button = gr.Button("Submit Feedback", variant="secondary")
             feedback_status = gr.Textbox(label="Feedback Status", interactive=False, visible=False)
             
-            feedback_button.click(
-                fn=lambda: gr.update(visible=True),
-                outputs=[feedback_status]
-            )
+            # Initialize feedback stats
+            initial_stats = detector.get_feedback_stats()
+            if initial_stats:
+                feedback_stats.value = f"""
+                <div class="stats-section">
+                    <div class="stat-item">
+                        <div class="stat-value">{initial_stats['total_feedback']}</div>
+                        <div class="stat-label">Total Feedback</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{initial_stats['hallucinations_detected']}</div>
+                        <div class="stat-label">Hallucinations Found</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{initial_stats['no_hallucinations']}</div>
+                        <div class="stat-label">No Hallucinations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{initial_stats['average_confidence']}</div>
+                        <div class="stat-label">Avg. Confidence</div>
+                    </div>
+                </div>
+                """
         
         # Hidden state to store results for feedback
         hidden_results = gr.State()
@@ -1263,7 +1399,7 @@ def create_interface():
         feedback_button.click(
             fn=combine_feedback,
             inputs=[feedback_input, feedback_text, hidden_results],
-            outputs=[feedback_status]
+            outputs=[feedback_status, feedback_stats]
         )
         
         # Footer
