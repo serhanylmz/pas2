@@ -33,20 +33,22 @@ class HallucinationJudgment(BaseModel):
     reasoning: str = Field(description="Detailed reasoning for the judgment")
     summary: str = Field(description="A summary of the analysis")
 
-class PAS2New:
-    """Paraphrase-based Approach for Scrutinizing Systems - New Version using model-as-judge"""
+class PAS2:
+    """Paraphrase-based Approach for Scrutinizing Systems - Using model-as-judge"""
     
     def __init__(self, mistral_api_key=None, openai_api_key=None, progress_callback=None):
-        """Initialize the PAS2New with API keys"""
-        self.mistral_api_key = mistral_api_key or os.environ.get("MISTRAL_API_KEY")
-        self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
+        """Initialize the PAS2 with API keys"""
+        # For Hugging Face Spaces, we prioritize getting API keys from HF_* environment variables
+        # which are set from the Secrets tab in the Space settings
+        self.mistral_api_key = mistral_api_key or os.environ.get("HF_MISTRAL_API_KEY") or os.environ.get("MISTRAL_API_KEY")
+        self.openai_api_key = openai_api_key or os.environ.get("HF_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
         self.progress_callback = progress_callback
         
         if not self.mistral_api_key:
-            raise ValueError("Mistral API key is required. Set it via MISTRAL_API_KEY environment variable or pass it as a parameter.")
+            raise ValueError("Mistral API key is required. Set it via HF_MISTRAL_API_KEY in Hugging Face Spaces secrets or pass it as a parameter.")
         
         if not self.openai_api_key:
-            raise ValueError("OpenAI API key is required. Set it via OPENAI_API_KEY environment variable or pass it as a parameter.")
+            raise ValueError("OpenAI API key is required. Set it via HF_OPENAI_API_KEY in Hugging Face Spaces secrets or pass it as a parameter.")
         
         self.mistral_client = Mistral(api_key=self.mistral_api_key)
         self.openai_client = OpenAI(api_key=self.openai_api_key)
@@ -54,7 +56,7 @@ class PAS2New:
         self.mistral_model = "mistral-large-latest"
         self.openai_model = "o3-mini"
         
-        logger.info("PAS2New initialized with Mistral model: %s and OpenAI model: %s", 
+        logger.info("PAS2 initialized with Mistral model: %s and OpenAI model: %s", 
                    self.mistral_model, self.openai_model)
     
     def generate_paraphrases(self, query: str, n_paraphrases: int = 3) -> List[str]:
@@ -377,7 +379,7 @@ Your response should be a JSON with the following fields:
 class HallucinationDetectorApp:
     def __init__(self):
         self.pas2 = None
-        self.results_file = "hallucination_results_new.xlsx"
+        self.results_file = "hallucination_results.xlsx"
         logger.info("Initializing HallucinationDetectorApp")
         self._initialize_results_file()
         self.progress_callback = None
@@ -400,10 +402,10 @@ class HallucinationDetectorApp:
         self.progress_callback = callback
     
     def initialize_api(self, mistral_api_key, openai_api_key):
-        """Initialize the PAS2New with API keys"""
+        """Initialize the PAS2 with API keys"""
         try:
-            logger.info("Initializing PAS2New with API keys")
-            self.pas2 = PAS2New(
+            logger.info("Initializing PAS2 with API keys")
+            self.pas2 = PAS2(
                 mistral_api_key=mistral_api_key, 
                 openai_api_key=openai_api_key,
                 progress_callback=self.progress_callback
@@ -415,9 +417,9 @@ class HallucinationDetectorApp:
             return f"Error initializing API: {str(e)}"
     
     def process_query(self, query: str):
-        """Process the query using PAS2New"""
+        """Process the query using PAS2"""
         if not self.pas2:
-            logger.error("PAS2New not initialized")
+            logger.error("PAS2 not initialized")
             return {
                 "error": "Please set API keys first before processing queries."
             }
@@ -434,7 +436,7 @@ class HallucinationDetectorApp:
                 self.pas2.progress_callback = self.progress_callback
                 
             # Process the query
-            logger.info("Processing query with PAS2New: %s", query)
+            logger.info("Processing query with PAS2: %s", query)
             results = self.pas2.detect_hallucination(query)
             logger.info("Query processing completed successfully")
             return results
@@ -620,12 +622,12 @@ def create_interface():
     # Initialize APIs from environment variables automatically
     try:
         detector.initialize_api(
-            mistral_api_key=os.environ.get("MISTRAL_API_KEY"),
-            openai_api_key=os.environ.get("OPENAI_API_KEY")
+            mistral_api_key=os.environ.get("HF_MISTRAL_API_KEY"),
+            openai_api_key=os.environ.get("HF_OPENAI_API_KEY")
         )
     except Exception as e:
         print(f"Warning: Failed to initialize APIs from environment variables: {e}")
-        print("Please make sure MISTRAL_API_KEY and OPENAI_API_KEY are set in your environment")
+        print("Please make sure HF_MISTRAL_API_KEY and HF_OPENAI_API_KEY are set in your environment")
     
     # CSS for styling
     css = """
@@ -857,8 +859,8 @@ def create_interface():
                 logger.info("Initializing APIs from environment variables")
                 progress(0.05, desc="Initializing API...")
                 init_message = detector.initialize_api(
-                    mistral_api_key=os.environ.get("MISTRAL_API_KEY"),
-                    openai_api_key=os.environ.get("OPENAI_API_KEY")
+                    mistral_api_key=os.environ.get("HF_MISTRAL_API_KEY"),
+                    openai_api_key=os.environ.get("HF_OPENAI_API_KEY")
                 )
                 if "successfully" not in init_message:
                     logger.error("Failed to initialize APIs: %s", init_message)
@@ -1327,12 +1329,10 @@ if __name__ == "__main__":
     logger.info("Launching Gradio interface...")
     interface.launch(
         show_api=False, 
-        quiet=False,
-        server_name="0.0.0.0",
-        server_port=7860,
+        quiet=True,  # Changed to True for Hugging Face deployment
         share=False,
         max_threads=10,
-        debug=True
+        debug=False  # Changed to False for production deployment
     )
     
 # Uncomment this line to run the test function instead of the main interface
