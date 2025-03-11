@@ -1,10 +1,7 @@
-openai
-pydantic
-mistralai
-numpy
-matplotlib
-python-dotenv
-argparse
 gradio
 pandas
-openpyxl
+numpy
+mistralai
+openai
+pydantic
+python-dotenv

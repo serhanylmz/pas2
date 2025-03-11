@@ -1,30 +1,81 @@
-# PAS2 Hallucination Detector
+# PAS2 - Hallucination Detection System
 
-This application implements the Paraphrase-based Approach for Scrutinizing Systems (PAS2) to detect hallucinations in large language model responses. 
+A sophisticated system for detecting hallucinations in AI responses using a paraphrase-based approach with model-as-judge verification.
 
-## How It Works
+## Features
 
-1. The system takes your query and generates paraphrased versions of it
-2. It sends both the original and paraphrased queries to an LLM
-3. It analyzes the responses for inconsistencies that may indicate hallucinations
-4. A judge model evaluates the responses and provides a detailed analysis
+- **Paraphrase Generation**: Automatically generates semantically equivalent variations of user queries
+- **Multi-Model Architecture**: Uses Mistral Large for responses and OpenAI's o3-mini as a judge
+- **Real-time Progress Tracking**: Visual feedback during the analysis process
+- **Persistent Feedback Storage**: User feedback and results are stored in a persistent SQLite database
+- **Interactive Web Interface**: Clean, responsive Gradio interface with example queries
+- **Detailed Analysis**: Provides confidence scores, reasoning, and specific conflicting facts
+- **Statistics Dashboard**: Real-time tracking of hallucination detection statistics
 
 ## Setup
 
-To use this application, you need to set up API keys in the Hugging Face Space:
-
-1. Go to the Settings tab of your Space
-2. Navigate to the "Secrets" section
-3. Add the following secrets:
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Set up your API keys as environment variables:
    - `HF_MISTRAL_API_KEY`: Your Mistral AI API key
    - `HF_OPENAI_API_KEY`: Your OpenAI API key
 
+## Deployment on Hugging Face Spaces
+
+1. Create a new Space on Hugging Face
+2. Select "Gradio" as the SDK
+3. Add your repository
+4. Set the following secrets in your Space's settings:
+   - `HF_MISTRAL_API_KEY`
+   - `HF_OPENAI_API_KEY`
+
+The application uses Hugging Face Spaces' persistent storage (`/data` directory) to maintain feedback data between restarts.
+
 ## Usage
 
-1. Enter your API keys in the interface
-2. Type your query in the input box
-3. Click "Detect Hallucinations"
-4. View the results and analysis
+1. Enter a factual question or select from example queries
+2. Click "Detect Hallucinations" to start the analysis
+3. Review the detailed results:
+   - Hallucination detection status
+   - Confidence score
+   - Original and paraphrased responses
+   - Detailed reasoning and analysis
+4. Provide feedback to help improve the system
+
+## How It Works
+
+1. **Query Processing**:
+   - Your question is paraphrased multiple ways
+   - Each version is sent to Mistral Large
+   - Responses are collected and compared
+
+2. **Hallucination Detection**:
+   - OpenAI's o3-mini analyzes responses
+   - Identifies factual inconsistencies
+   - Provides confidence scores and reasoning
+
+3. **Feedback Collection**:
+   - User feedback is stored in SQLite database
+   - Persistent storage ensures data survival
+   - Statistics are updated in real-time
+
+## Data Persistence
+
+The application uses SQLite for data storage in Hugging Face Spaces' persistent `/data` directory. This ensures:
+- Feedback data survives Space restarts
+- Statistics are preserved long-term
+- No data loss during inactivity periods
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## About
 
