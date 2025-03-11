@@ -1,3 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local configuration
+.env
+
+# Results and data files
+results/
+*.csv
+*.xlsx
+
+# Gradio
+flagged/
+
 # Code outputs
 *.png
 *.xlsx
@@ -8,16 +54,6 @@
 # Environment Variables
 .env
 
-# Python
-__pycache__/
-*.py[cod]
-*.so
-
-# Virtual Environment
-venv/
-env/
-.venv/
-
 # IDEs and Editors
 .vscode/
 .idea/
@@ -27,9 +63,6 @@ env/
 # Operating System Files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
 
 # Build files
 build/

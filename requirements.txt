@@ -1,5 +1,7 @@
-numpy
 openai
+pydantic
+mistralai
+numpy
 matplotlib
 python-dotenv
 argparse
