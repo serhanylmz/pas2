@@ -1,6 +1,34 @@
-# PAS2 - Paraphrase-based AI System for Semantic Similarity
+# PAS2 Hallucination Detector
 
-A hallucination detection system that uses paraphrasing and semantic similarity analysis to evaluate the consistency of AI responses.
+This application implements the Paraphrase-based Approach for Scrutinizing Systems (PAS2) to detect hallucinations in large language model responses. 
+
+## How It Works
+
+1. The system takes your query and generates paraphrased versions of it
+2. It sends both the original and paraphrased queries to an LLM
+3. It analyzes the responses for inconsistencies that may indicate hallucinations
+4. A judge model evaluates the responses and provides a detailed analysis
+
+## Setup
+
+To use this application, you need to set up API keys in the Hugging Face Space:
+
+1. Go to the Settings tab of your Space
+2. Navigate to the "Secrets" section
+3. Add the following secrets:
+   - `HF_MISTRAL_API_KEY`: Your Mistral AI API key
+   - `HF_OPENAI_API_KEY`: Your OpenAI API key
+
+## Usage
+
+1. Enter your API keys in the interface
+2. Type your query in the input box
+3. Click "Detect Hallucinations"
+4. View the results and analysis
+
+## About
+
+This application uses a combination of paraphrasing techniques and model-as-judge approaches to identify potential hallucinations in LLM responses. It provides confidence scores, identifies conflicting facts, and offers detailed reasoning for its judgments.
 
 ## Features
 
